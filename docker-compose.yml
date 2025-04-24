@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./database:/app/database  
+    environment:
+      - SWIFT_DATA_PATH=/app/data/swift_data.xlsx
+      - DATABASE_PATH=/app/database/swift_codes.db
+    restart: always
+
+volumes:
+  data:
+  database:
