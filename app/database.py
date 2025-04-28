@@ -1,23 +1,39 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Match environment variable with docker-compose
-database_path = os.environ.get("DATABASE_PATH", "./swift_codes.db")
-database_url = f"sqlite:///{database_path}"
+class DatabaseManager:
+    """
+    Encapsulates database engine, session factory, and metadata management.
+    """
+    # Match environment variable with docker-compose
+    database_path = os.environ.get("DATABASE_PATH", "./swift_codes.db")
+    database_url = f"sqlite:///{database_path}"
 
-engine = create_engine(database_url, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # Engine and session factory
+    engine = create_engine(database_url, connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+    # Base class for declarative models
+    Base = declarative_base()
 
-def create_tables():
-    Base.metadata.create_all(bind=engine)
+    @classmethod
+    def create_tables(cls):
+        """
+        Create all tables defined on the Base metadata.
+        """
+        cls.Base.metadata.create_all(bind=cls.engine)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    @classmethod
+    def get_db(cls):
+        """
+        Dependency generator that provides a database session and ensures it is closed
+        after use.
+        Yields:
+            Session: an SQLAlchemy session.
+        """
+        db = cls.SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()

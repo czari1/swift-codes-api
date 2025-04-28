@@ -1,19 +1,22 @@
 import os
 import logging
+import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.api.routes import router
-from app.database import get_db, create_tables
+from app.routes.swift_codes import router
+from app.database import DatabaseManager
 from app.utils.parser import SwiftCodeParser
 from app.services.swift_service import SwiftCodeService
+from app.models.swift_code import SwiftCode
+
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    create_tables()
+    DatabaseManager.create_tables()
 
-    db = next(get_db())
+    db = next(DatabaseManager.get_db())
 
-    from app.models import SwiftCode
+
     count = db.query(SwiftCode).count()
 
     if count == 0:
@@ -27,9 +30,12 @@ async def lifespan(app:FastAPI):
             swift_data = parser.parse()
             
             logging.info(f"Parsed {len(swift_data)} SWIFT codes")
+            
             SwiftCodeService.bulk_create_swift_codes(db, swift_data)
+            
             logging.info(f"Loaded {len(swift_data)} SWIFT codes into the database.")
         else:
+
             logging.warning(f"WARNING: Swift data file not found at {data_path}. Absolute path: {os.path.abspath(data_path)}")
 
     yield
@@ -48,5 +54,4 @@ def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8080, reload=True)

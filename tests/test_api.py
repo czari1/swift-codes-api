@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.database import Base, engine, get_db
+from app.database import DatabaseManager
 from app.models import SwiftCode, BranchAssociation
 import uuid
 
@@ -9,9 +9,9 @@ client = TestClient(app)
 
 @pytest.fixture(scope="module")
 def test_db():
-    Base.metadata.create_all(bind=engine)
+    DatabaseManager.Base.metadata.create_all(bind=DatabaseManager.engine)
     
-    db = next(get_db())
+    db = next(DatabaseManager.get_db())
     
     # Add test data
     hq = SwiftCode(

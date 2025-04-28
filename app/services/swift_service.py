@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from app.models import SwiftCode, BranchAssociation
+from app.models.swift_code import SwiftCode
+from app.models.branch_association import BranchAssociation
 import uuid
 
 class SwiftCodeService:
