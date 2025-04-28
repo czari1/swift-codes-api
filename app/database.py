@@ -4,18 +4,18 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Match environment variable with docker-compose
-DatabasePath = os.environ.get("DATABASE_PATH", "./swift_codes.db")
-DatabaseURL = f"sqlite:///{DatabasePath}"
+database_path = os.environ.get("DATABASE_PATH", "./swift_codes.db")
+database_url = f"sqlite:///{database_path}"
 
-engine = create_engine(DatabaseURL, connect_args={"check_same_thread": False})
+engine = create_engine(database_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-def createTables():
+def create_tables():
     Base.metadata.create_all(bind=engine)
 
-def getDB():
+def get_db():
     db = SessionLocal()
     try:
         yield db

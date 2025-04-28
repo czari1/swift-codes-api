@@ -3,34 +3,34 @@ import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.api.routes import router
-from app.database import getDB, createTables
+from app.database import get_db, create_tables
 from app.utils.parser import SwiftCodeParser
-from app.services.SWIFTService import SwiftCodeService
+from app.services.swift_service import SwiftCodeService
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    createTables()
+    create_tables()
 
-    db = next(getDB())
+    db = next(get_db())
 
     from app.models import SwiftCode
     count = db.query(SwiftCode).count()
 
     if count == 0:
         # Add logging to debug data loading
-        dataPath = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
-        logging.info(f"Checking for SWIFT data at: {dataPath}")
+        data_path = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
+        logging.info(f"Checking for SWIFT data at: {data_path}")
 
-        if os.path.exists(dataPath):
-            logging.info(f"Loading SWIFT data from: {dataPath}")
-            parser = SwiftCodeParser(dataPath)
-            swiftData = parser.parse()
+        if os.path.exists(data_path):
+            logging.info(f"Loading SWIFT data from: {data_path}")
+            parser = SwiftCodeParser(data_path)
+            swift_data = parser.parse()
             
-            logging.info(f"Parsed {len(swiftData)} SWIFT codes")
-            SwiftCodeService.bulkCreateSwiftCodes(db, swiftData)
-            logging.info(f"Loaded {len(swiftData)} SWIFT codes into the database.")
+            logging.info(f"Parsed {len(swift_data)} SWIFT codes")
+            SwiftCodeService.bulk_create_swift_codes(db, swift_data)
+            logging.info(f"Loaded {len(swift_data)} SWIFT codes into the database.")
         else:
-            logging.warning(f"WARNING: Swift data file not found at {dataPath}. Absolute path: {os.path.abspath(dataPath)}")
+            logging.warning(f"WARNING: Swift data file not found at {data_path}. Absolute path: {os.path.abspath(data_path)}")
 
     yield
 
@@ -44,7 +44,7 @@ app = FastAPI(
 app.include_router(router)
 
 @app.get("/health")
-def healthCheck():
+def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":

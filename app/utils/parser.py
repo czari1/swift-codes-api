@@ -3,36 +3,36 @@ from typing import List, Dict, Any
 import logging
 
 class SwiftCodeParser:
-    def __init__(self, filePath: str):
-        self.filePath = filePath
+    def __init__(self, file_path: str):
+        self.file_path = file_path
 
     def parse(self) -> List[Dict[str, Any]]:
         try:
-            df = pd.read_excel(self.filePath)
+            df = pd.read_excel(self.file_path)
             df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
 
-            requiredColumns = ['country_iso2_code', 'swift_code', 'name', 'address', 'country_name']
+            required_columns = ['country_iso2_code', 'swift_code', 'name', 'address', 'country_name']
 
-            for col in requiredColumns:
+            for col in required_columns:
                 if col not in df.columns:
                     raise ValueError(f"Required column '{col}' is missing in the file.")
             
             result = []
 
             for _, row in df.iterrows():
-                countryISO2 = row['country_iso2_code'].strip().upper()
-                countryName = row['country_name'].strip().upper()
-                swiftCode = row['swift_code'].strip().upper()
+                country_iso2 = row['country_iso2_code'].strip().upper()
+                country_name = row['country_name'].strip().upper()
+                swift_code = row['swift_code'].strip().upper()
 
-                isHeadquarters = swiftCode.endswith('XXX')
+                is_headquarters = swift_code.endswith('XXX')
 
                 entry = {
-                    'swiftCode': swiftCode,
-                    'bankName': row['name'].strip(),
+                    'swift_code': swift_code,
+                    'bank_name': row['name'].strip(),
                     'address': row['address'].strip(),
-                    'countryISO2': countryISO2,
-                    'countryName': countryName,
-                    'isHeadquarters': isHeadquarters
+                    'country_iso2': country_iso2,
+                    'country_name': country_name,
+                    'is_headquarters': is_headquarters
                 }
 
                 result.append(entry)
@@ -44,21 +44,21 @@ class SwiftCodeParser:
         
         return []
     
-    def getHeadquartersMap(self, swiftData: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
-        hqMap = {}
+    def get_headquarters_map(self, swift_data: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        hq_map = {}
 
-        for entry in swiftData:
-            if entry['isHeadquarters']:
-                hqCode = entry['swiftCode']
-                hqMap[hqCode] = []
+        for entry in swift_data:
+            if entry['is_headquarters']:
+                hq_code = entry['swift_code']
+                hq_map[hq_code] = []
 
-        for entry in swiftData:
-            if not entry['isHeadquarters']:
+        for entry in swift_data:
+            if not entry['is_headquarters']:
                 # Change to -3 to match the service class
-                potentialHq = entry['swiftCode'][:-3] + 'XXX'
+                potential_hq = entry['swift_code'][:-3] + 'XXX'
 
-                if potentialHq in hqMap:
-                    branchData = entry.copy()
-                    hqMap[potentialHq].append(branchData)
+                if potential_hq in hq_map:
+                    branch_data = entry.copy()
+                    hq_map[potential_hq].append(branch_data)
         
-        return hqMap
+        return hq_map
