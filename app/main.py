@@ -3,16 +3,25 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.routes.swift_codes import router
+from app.routes.swift_codes import SwiftCodesRoutes
 from app.database import DatabaseManager
 from app.utils.parser import SwiftCodeParser
+from app.repositories.swift_code_repository import SwiftCodeRepository
 from app.services.swift_service import SwiftCodeService
+from app.controllers.swift_controllers import SwiftCodeController
+from app.routes.swift_codes import SwiftCodesRoutes
 from app.models.swift_code import SwiftCode
 
+swift_code_repository = SwiftCodeRepository(next(DatabaseManager.get_db()))
+swift_code_service = SwiftCodeService(swift_code_repository)
+swift_code_controller = SwiftCodeController(swift_code_service)
+swift_code_routes = SwiftCodesRoutes(swift_code_controller).router
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     DatabaseManager.create_tables()
+
+    print("Creating tables...")
 
     db = next(DatabaseManager.get_db())
     count = db.query(SwiftCode).count()
@@ -21,6 +30,9 @@ async def lifespan(app:FastAPI):
         # First check the file from environment variable
         data_path = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
         base_path, ext = os.path.splitext(data_path)
+
+
+        print("Checking for SWIFT data file...")
         
         # If the specified file doesn't exist but CSV version does, use CSV instead
         if not os.path.exists(data_path) and os.path.exists(f"{base_path}.csv"):
@@ -55,7 +67,7 @@ async def lifespan(app:FastAPI):
             
             logging.info(f"Parsed {len(swift_data)} SWIFT codes")
             
-            SwiftCodeService.bulk_create_swift_codes(db, swift_data)
+            swift_code_repository.bulk_create_swift_codes(swift_data)
             
             logging.info(f"Loaded {len(swift_data)} SWIFT codes into the database.")
         else:
@@ -70,7 +82,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-app.include_router(router)
+app.include_router(swift_code_routes)
 
 @app.get("/health")
 def health_check():
