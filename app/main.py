@@ -51,7 +51,7 @@ async def lifespan(app:FastAPI):
             parser = SwiftCodeParser(data_path)
             
             # Use parse() method that handles both .xlsx and .csv files
-            swift_data = parser.parse()
+            swift_data = parser.parse_files()
             
             logging.info(f"Parsed {len(swift_data)} SWIFT codes")
             

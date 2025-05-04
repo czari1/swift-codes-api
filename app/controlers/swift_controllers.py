@@ -26,4 +26,4 @@ class SwiftCodeController:
 
         if existing:
             raise ValueError(f"Swift code {swift_data['swift_code']} already exists.")
-        
+

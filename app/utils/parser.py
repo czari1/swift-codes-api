@@ -8,12 +8,6 @@ class SwiftCodeParser:
         self.file_path = file_path
         self.file_extension = os.path.splitext(file_path)[1].lower()
 
-    def parse(self) -> List[Dict[str, Any]]:
-        """
-        Parse SWIFT codes data from either Excel (.xlsx, .xls) or CSV (.csv) files.
-        This method automatically detects the file type based on extension.
-        """
-        return self.parse_files()  # Despite the name, parse_excel already handles both formats
 
     def parse_files(self) -> List[Dict[str, Any]]:
         """

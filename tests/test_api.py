@@ -260,3 +260,5 @@ def test_headquarters_deletion_removes_branches_association(test_db):
     assert branch_response.status_code == 200
 
     client.delete(f"/v1/swift-codes/{branch_code}")
+
+    
