@@ -1,4 +1,3 @@
-version: '3'
 
 services:
   api:
@@ -12,7 +11,3 @@ services:
       - SWIFT_DATA_PATH=/app/data/swift_data.xlsx
       - DATABASE_PATH=/app/database/swift_codes.db
     restart: always
-
-volumes:
-  data:
-  database:
