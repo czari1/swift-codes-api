@@ -15,18 +15,42 @@ async def lifespan(app:FastAPI):
     DatabaseManager.create_tables()
 
     db = next(DatabaseManager.get_db())
-
-
     count = db.query(SwiftCode).count()
 
     if count == 0:
-        # Add logging to debug data loading
+        # First check the file from environment variable
         data_path = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
+        base_path, ext = os.path.splitext(data_path)
+        
+        # If the specified file doesn't exist but CSV version does, use CSV instead
+        if not os.path.exists(data_path) and os.path.exists(f"{base_path}.csv"):
+            data_path = f"{base_path}.csv"
+            logging.info(f"Excel file not found, using CSV file: {data_path}")
+        
+        # If neither exists, try alternative filenames
+        if not os.path.exists(data_path):
+            # Try common alternatives
+            alternatives = [
+                "data/swiftCodes.csv", 
+                "data/swift_data.xlsx", 
+                "data/swift_data.csv",
+                "data/swift_codes.xlsx",
+                "data/swift_codes.csv"
+            ]
+            
+            for alt_path in alternatives:
+                if os.path.exists(alt_path) and alt_path != data_path:
+                    data_path = alt_path
+                    logging.info(f"Using alternative data file: {data_path}")
+                    break
+        
         logging.info(f"Checking for SWIFT data at: {data_path}")
 
         if os.path.exists(data_path):
             logging.info(f"Loading SWIFT data from: {data_path}")
             parser = SwiftCodeParser(data_path)
+            
+            # Use parse() method that handles both .xlsx and .csv files
             swift_data = parser.parse()
             
             logging.info(f"Parsed {len(swift_data)} SWIFT codes")
@@ -35,8 +59,7 @@ async def lifespan(app:FastAPI):
             
             logging.info(f"Loaded {len(swift_data)} SWIFT codes into the database.")
         else:
-
-            logging.warning(f"WARNING: Swift data file not found at {data_path}. Absolute path: {os.path.abspath(data_path)}")
+            logging.warning(f"WARNING: Swift data file not found at {data_path} or any alternative locations. Absolute path: {os.path.abspath(data_path)}")
 
     yield
 

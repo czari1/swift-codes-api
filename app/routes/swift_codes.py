@@ -4,11 +4,11 @@ from typing import List
 from app.database import DatabaseManager
 from app.services.swift_service import SwiftCodeService
 from pydantic import BaseModel
+from app.controlers.swift_controllers import SwiftCodeController
+from pydantic import validator
 
-# Create the router
 router = APIRouter(prefix="/v1/swift-codes", tags=["SWIFT Codes"])
 
-# Define your model classes
 class SwiftCodeBase(BaseModel):
     swift_code: str
     bank_name: str
@@ -16,6 +16,20 @@ class SwiftCodeBase(BaseModel):
     country_iso2: str
     country_name: str
     is_headquarters: bool
+
+    @validator('swift_code')
+    def validate_swift_code(cls, v):
+        try:
+            SwiftCodeController.validate_swift_code(v)
+        except ValueError as e:
+            raise ValueError(str(e))
+        return v.upper()
+    
+    @validator('country_iso2')
+    def validate_country_iso2(cls, v):
+        if len(v) != 2:
+            raise ValueError("Country ISO2 code must be exactly 2 characters")
+        return v.upper()
 
 class SwiftCodeResponse(SwiftCodeBase):
     pass
@@ -40,7 +54,7 @@ def get_country_swift_codes(country_iso2: str, db: Session = Depends(DatabaseMan
 
     return result
 
-@router.get("/{swift_code}", response_model=None)  # Remove response model validation temporarily
+@router.get("/{swift_code}", response_model=SwiftCodeWithBranches)  
 def get_swift_code(swift_code: str, db: Session = Depends(DatabaseManager.get_db)):
     result = SwiftCodeService.get_swift_code(db, swift_code)
 
@@ -56,13 +70,10 @@ def get_swift_code(swift_code: str, db: Session = Depends(DatabaseManager.get_db
 def create_swift_code(swift_code: SwiftCodeBase, db: Session = Depends(DatabaseManager.get_db)):
     
     try:
-        # Change from .dict() to .model_dump() for Pydantic V2
         SwiftCodeService.create_swift_code(db, swift_code.model_dump())
-        
         return {"message": f"SWIFT code {swift_code.swift_code} created successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 @router.delete("/{swift_code}", response_model=MessageResponse)
 def delete_swift_code(swift_code: str, db: Session = Depends(DatabaseManager.get_db)):
     success = SwiftCodeService.delete_swift_code(db, swift_code)

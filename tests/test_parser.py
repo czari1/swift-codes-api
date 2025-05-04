@@ -25,7 +25,7 @@ class TestSwiftCodeParser(unittest.TestCase):
     
     def test_parse(self):
         parser = SwiftCodeParser(self.test_file)
-        result = parser.parse()
+        result = parser.parse_files()
         
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]['swift_code'], 'ABCDUSXXX')
@@ -48,7 +48,7 @@ class TestSwiftCodeParser(unittest.TestCase):
         df.to_excel(self.test_file, index=False)
         
         parser = SwiftCodeParser(self.test_file)
-        swift_data = parser.parse()
+        swift_data = parser.parse_files()
         hq_map = parser.get_headquarters_map(swift_data)
         
         # Test that headquarters mapping works
@@ -76,7 +76,7 @@ class TestSwiftCodeParser(unittest.TestCase):
         
         # This should raise an error because required columns are missing
         with self.assertRaises(ValueError):
-            parser.parse()
+            parser.parse_files()
 
     def test_missing_required_columns(self):
         """Test parsing a file with missing required columns."""
@@ -93,7 +93,7 @@ class TestSwiftCodeParser(unittest.TestCase):
         
         # This should raise an error
         with self.assertRaises(ValueError):
-            parser.parse()
+            parser.parse_files()
 
     def test_mixed_case_handling(self):
         """Test that the parser handles mixed case correctly."""
@@ -109,7 +109,7 @@ class TestSwiftCodeParser(unittest.TestCase):
         df.to_excel(self.test_file, index=False)
         
         parser = SwiftCodeParser(self.test_file)
-        result = parser.parse()
+        result = parser.parse_files()
         
         # Check that everything was converted to uppercase
         self.assertEqual(result[0]['swift_code'], 'ABCDUSXXX')
@@ -134,7 +134,7 @@ class TestSwiftCodeParser(unittest.TestCase):
         df.to_excel(self.test_file, index=False)
         
         parser = SwiftCodeParser(self.test_file)
-        result = parser.parse()
+        result = parser.parse_files()
         
         # Check that special characters are preserved where appropriate
         self.assertEqual(result[0]['bank_name'], 'Banque Spéciale')
