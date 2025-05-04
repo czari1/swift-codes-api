@@ -1,12 +1,10 @@
-from typing import Dict, Any, List
-from pydantic import BaseModel, validator
-from sqlalchemy.orm import Session
-from app.models.swift_code import SwiftCode
 from app.models.types import SwiftCodeBase
 from app.services.swift_service import SwiftCodeService
-from fastapi import APIRouter, Depends, HTTPException
-from app.database import DatabaseManager
+from fastapi import HTTPException
+from app.models.swift_code import SwiftCode
+from app.models.branch_association import BranchAssociation
 import re
+import uuid
 
 SWIFT_CODE_PATTERN = re.compile(r'^[A-Z0-9]{4,11}(?:XXX)?$')
 
@@ -29,27 +27,22 @@ class SwiftCodeController:
         print(f"Creating SWIFT code: {swift_data}")
         swift_code = swift_data.swift_code.upper()
         
-        # Validate the SWIFT code format
         try:
             self.validate_swift_code(swift_code)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         
         try:
-            # First check if the code already exists
             existing = await self.swift_service.get_swift_code(swift_code)
             if existing:
                 raise HTTPException(status_code=409, detail=f"Swift code {swift_code} already exists.")
             
-            # Create the new SWIFT code
             await self.swift_service.create_swift_code(swift_data.model_dump())
             return {"message": f"SWIFT code {swift_code} created successfully"}
             
         except HTTPException:
-            # Re-raise HTTP exceptions
             raise
         except Exception as e:
-            # Handle any other errors
             raise HTTPException(status_code=500, detail=f"Error creating SWIFT code: {str(e)}")
 
 
@@ -69,17 +62,54 @@ class SwiftCodeController:
             raise HTTPException(status_code=404, detail=f"No SWIFT codes found for country {country_iso2}")
         return result
     
-    # async def create_swift_code(self, swift_code: SwiftCodeBase):
-    #     try:
-    #         await self.swift_service.create_swift_code(swift_code.model_dump())
-
-    #         return {"message": f"SWIFT code {swift_code.swift_code} created successfully"}
-    #     except ValueError as e:
-    #         raise HTTPException(status_code=400, detail=str(e))
-    
     async def delete_swift_code(self, swift_code: str):
         if await self.swift_service.delete_swift_code(swift_code):
             return {"message": f"SWIFT code {swift_code} deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail=f"SWIFT code {swift_code} not found")
         
+    async def bulk_create_swift_codes(self, swift_codes: list[SwiftCodeBase]):
+        swift_code_models = []
+        associations = []
+        branch_hq_map = {}
+        
+        for data in swift_codes:
+            swift_code_str = data['swift_code'].upper()
+
+            try:
+                self.SwiftCodeController.validate_swift_code(swift_code_str)
+            except ValueError:
+                continue
+
+
+            swift_code_model = SwiftCode(
+                swift_code=data['swift_code'],
+                bank_name=data['bank_name'],
+                address=data['address'],
+                country_iso2=data['country_iso2'],
+                country_name=data['country_name'],
+                is_headquarters=data['is_headquarters']
+            )
+            swift_code_models.append(swift_code_model)
+        
+            if not data['is_headquarters']:
+                potential_hq = swift_code_str[:-3] + 'XXX'
+                if potential_hq not in branch_hq_map:
+                    branch_hq_map[potential_hq] = []
+                branch_hq_map[potential_hq].append(swift_code_str)
+        
+        self.swift_service.add_many_swift_codes(swift_code_models)
+    
+        for hq_code, branch_codes in branch_hq_map.items():
+            hq = self.db.query(SwiftCode).filter(SwiftCode.swift_code == hq_code).first()
+            if hq:
+                for branch_code in branch_codes:
+                    association = BranchAssociation(
+                        id=str(uuid.uuid4()),
+                        headquarter_swift=hq_code,
+                        branch_swift=branch_code
+                    )
+                    associations.append(association)
+        
+        self.swift_service.add_many_associations(associations)
+    

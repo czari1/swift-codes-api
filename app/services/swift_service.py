@@ -1,9 +1,6 @@
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from app.models.branch_association import BranchAssociation
+from typing import Dict, Any, Optional
 from app.repositories.swift_code_repository import SwiftCodeRepository
-import uuid
-import logging
+
 
 class SwiftCodeService:
     def __init__(self, swift_code_repository: SwiftCodeRepository):
@@ -31,4 +28,15 @@ class SwiftCodeService:
         deleted_swift_code = self.swift_code_repository.delete_swift_code(swift_code)
 
         return deleted_swift_code
+    
+    async def add_many_swift_codes(self, swift_codes: list[Dict[str, Any]]):
+        many_swift_codes = self.swift_code_repository.add_many_swift_codes(swift_codes)
+
+        return many_swift_codes
+    
+    async def add_many_associations(self, associations: list[Dict[str, Any]]):
+        many_associations = self.swift_code_repository.add_many_associations(associations)
+
+        return many_associations
+    
 

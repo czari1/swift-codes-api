@@ -64,19 +64,15 @@ class SwiftCodeParser:
         """
         hq_map = {}
 
-        # First pass: collect all headquarters
         for entry in swift_data:
             if entry['is_headquarters']:
                 hq_code = entry['swift_code']
                 hq_map[hq_code] = []
 
-        # Second pass: associate branches with headquarters
         for entry in swift_data:
             if not entry['is_headquarters']:
-                # Calculate potential headquarters code (first 6 chars + XXX)
                 potential_hq = entry['swift_code'][:-3] + 'XXX'
                 
-                # Fixed indentation: this if statement was outside the block
                 if potential_hq in hq_map:
                     branch_data = entry.copy()
                     hq_map[potential_hq].append(branch_data)

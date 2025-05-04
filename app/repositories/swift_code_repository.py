@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.models.swift_code import SwiftCode
 from app.models.branch_association import BranchAssociation
+
 import uuid
 import logging
 
@@ -92,12 +93,10 @@ class SwiftCodeRepository:
     def create_swift_code(self, swift_data):
         swift_code = swift_data['swift_code'].upper()
         
-        # Check for existing code
         existing = self.db.query(SwiftCode).filter(SwiftCode.swift_code == swift_code).first()
         if existing:
             raise ValueError(f"Swift code {swift_code} already exists.")
         
-        # Create new SwiftCode instance
         new_swift_code = SwiftCode(
             swift_code=swift_code,
             bank_name=swift_data['bank_name'],
@@ -111,24 +110,13 @@ class SwiftCodeRepository:
         self.db.commit()
         self.db.refresh(new_swift_code)
         
-        # Handle branch association for non-headquarters
         if not swift_data['is_headquarters']:
-            # Special test case handling
-            if swift_code.startswith('TEST'):
-                hq_code = 'TESTUSXXX'
-            elif swift_code.startswith('BRANCHQ3'):  # Special handling for BRANCHQ33
-                hq_code = 'BRANCHQXXX'
-            elif swift_code.startswith('DELASS3'):  # Special handling for DELASS33
-                hq_code = 'DELASSXX'
-            else:
-                # Normal pattern - first 6 chars + XXX
-                hq_code = swift_code[:6] + 'XXX'
+            hq_code = swift_code[:6] + 'XXX'
                 
-            # Find headquarters
             hq = self.db.query(SwiftCode).filter(SwiftCode.swift_code == hq_code).first()
             
             if hq:
-                # Create association
+
                 association = BranchAssociation(
                     id=str(uuid.uuid4()),
                     headquarter_swift=hq_code,
@@ -143,35 +131,7 @@ class SwiftCodeRepository:
         return new_swift_code
 
 
-    def bulk_create_swift_codes(self, swift_codes: List[Dict[str, Any]]) -> None:
-        swift_code_models = []
-        associations = []
-        branch_hq_map = {}
-        
-        for data in swift_codes:
-            swift_code_str = data['swift_code'].upper()
-
-            try:
-                SwiftCodeController.validate_swift_code(swift_code_str)
-            except ValueError:
-                continue
-
-
-            swift_code_model = SwiftCode(
-                swift_code=data['swift_code'],
-                bank_name=data['bank_name'],
-                address=data['address'],
-                country_iso2=data['country_iso2'],
-                country_name=data['country_name'],
-                is_headquarters=data['is_headquarters']
-            )
-            swift_code_models.append(swift_code_model)
-        
-            if not data['is_headquarters']:
-                potential_hq = swift_code_str[:-3] + 'XXX'
-                if potential_hq not in branch_hq_map:
-                    branch_hq_map[potential_hq] = []
-                branch_hq_map[potential_hq].append(swift_code_str)
+    def bulk_create_swift_codes(self, swift_code_models, branch_hq_map, associations) -> None:
         
 
         self.db.add_all(swift_code_models)
@@ -216,3 +176,13 @@ class SwiftCodeRepository:
 
         return True
     
+    def add_many_swift_codes(self, swift_code_models: List[Dict[str, Any]]) -> None:
+        self.db.add_all(swift_code_models)
+        self.db.flush()
+        self.db.commit()
+
+    def add_many_associations(self, associations: List[Dict[str, Any]]) -> None:
+        self.db.add_all(associations)
+        self.db.flush()
+        self.db.commit()
+

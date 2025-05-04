@@ -1,5 +1,5 @@
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, validator
+from typing import List
+from pydantic import BaseModel
 
 
 class SwiftCodeBase(BaseModel):

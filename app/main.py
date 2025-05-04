@@ -9,7 +9,6 @@ from app.utils.parser import SwiftCodeParser
 from app.repositories.swift_code_repository import SwiftCodeRepository
 from app.services.swift_service import SwiftCodeService
 from app.controllers.swift_controllers import SwiftCodeController
-from app.routes.swift_codes import SwiftCodesRoutes
 from app.models.swift_code import SwiftCode
 
 swift_code_repository = SwiftCodeRepository(next(DatabaseManager.get_db()))
@@ -21,27 +20,21 @@ swift_code_routes = SwiftCodesRoutes(swift_code_controller).router
 async def lifespan(app:FastAPI):
     DatabaseManager.create_tables()
 
-    print("Creating tables...")
-
     db = next(DatabaseManager.get_db())
     count = db.query(SwiftCode).count()
 
     if count == 0:
-        # First check the file from environment variable
         data_path = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
         base_path, ext = os.path.splitext(data_path)
 
 
         print("Checking for SWIFT data file...")
         
-        # If the specified file doesn't exist but CSV version does, use CSV instead
         if not os.path.exists(data_path) and os.path.exists(f"{base_path}.csv"):
             data_path = f"{base_path}.csv"
             logging.info(f"Excel file not found, using CSV file: {data_path}")
         
-        # If neither exists, try alternative filenames
         if not os.path.exists(data_path):
-            # Try common alternatives
             alternatives = [
                 "data/swiftCodes.csv", 
                 "data/swift_data.xlsx", 
@@ -62,7 +55,6 @@ async def lifespan(app:FastAPI):
             logging.info(f"Loading SWIFT data from: {data_path}")
             parser = SwiftCodeParser(data_path)
             
-            # Use parse() method that handles both .xlsx and .csv files
             swift_data = parser.parse_files()
             
             logging.info(f"Parsed {len(swift_data)} SWIFT codes")
