@@ -4,12 +4,14 @@ import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.routes.swift_codes import SwiftCodesRoutes
-from app.database import DatabaseManager
+from app.database import DatabaseManager, ensure_db_directory_exists
 from app.utils.parser import SwiftCodeParser
 from app.repositories.swift_code_repository import SwiftCodeRepository
 from app.services.swift_service import SwiftCodeService
 from app.controllers.swift_controllers import SwiftCodeController
 from app.models.swift_code import SwiftCode
+
+ensure_db_directory_exists()
 
 swift_code_repository = SwiftCodeRepository(next(DatabaseManager.get_db()))
 swift_code_service = SwiftCodeService(swift_code_repository)
@@ -26,7 +28,6 @@ async def lifespan(app:FastAPI):
     if count == 0:
         data_path = os.environ.get("SWIFT_DATA_PATH", "data/swiftCodes.xlsx")
         base_path, ext = os.path.splitext(data_path)
-
 
         print("Checking for SWIFT data file...")
         
@@ -56,10 +57,16 @@ async def lifespan(app:FastAPI):
             parser = SwiftCodeParser(data_path)
             
             swift_data = parser.parse_files()
-            
-            logging.info(f"Parsed {len(swift_data)} SWIFT codes")
-            
-            swift_code_repository.bulk_create_swift_codes(swift_data)
+            hq_map = parser.get_headquarters_map(swift_data)
+            branch_map = {}
+
+            # Convert hq_map format to match what bulk_create_swift_codes expects
+            for hq_code, branches in hq_map.items():
+                branch_map[hq_code] = [branch['swift_code'] for branch in branches]
+
+            # Add empty associations list as third parameter
+            associations = []
+            swift_code_repository.bulk_create_swift_codes(swift_data, branch_map, associations)
             
             logging.info(f"Loaded {len(swift_data)} SWIFT codes into the database.")
         else:

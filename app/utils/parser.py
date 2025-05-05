@@ -31,7 +31,7 @@ class SwiftCodeParser:
                 if col not in df.columns:
                     raise ValueError(f"Required column '{col}' is missing in the file.")
             
-            result = []
+            swift_data = []
 
             for _, row in df.iterrows():
                 country_iso2 = row['country_iso2_code'].strip().upper()
@@ -49,10 +49,11 @@ class SwiftCodeParser:
                     'is_headquarters': is_headquarters
                 }
 
-                result.append(entry)
-            
-            logging.info(f"Successfully parsed {len(result)} SWIFT codes from {self.file_path}")
-            return result
+                swift_data.append(entry)
+
+
+            logging.info(f"Successfully parsed {len(swift_data)} SWIFT codes from {self.file_path}")
+            return swift_data
 
         except Exception as e:
             logging.error(f"Error parsing file: {e}")
