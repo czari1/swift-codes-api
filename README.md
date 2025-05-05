@@ -143,24 +143,27 @@ Tests are written using `pytest` and cover various aspects of the application. F
 
 ## Project Structure
 
+```
 SWITFParser/
-├── app/                        # Application code
-│   ├── controllers/            # API controllers
-│   ├── models/                 # Data models
-│   ├── repositories/           # Database repositories
-│   ├── routes/                 # API routes
-│   ├── services/               # Business logic
-│   ├── utils/                  # Utilities
-│   ├── database.py             # Database configuration
-│   └── main.py                 # Application entry point
-├── data/                       # Data files directory
-├── database/                   # Database files directory
-├── tests/                      # Test suite
-│   ├── fixtures/               # Test data fixtures
-│   ├── integration/            # Integration tests
-│   ├── unit/                   # Unit tests
-│   └── conftest.py             # Test configuration
-├── Dockerfile                  # Docker configuration
-├── [docker-compose.yml]
-├── [requirements.txt]           
-└── [README.md]        
+├── app/                  # Application code
+│   ├── controllers/      # API controllers
+│   ├── models/           # Data models
+│   ├── repositories/     # Database repositories
+│   ├── routes/           # API routes
+│   ├── services/         # Business logic
+│   ├── utils/            # Utilities
+│   ├── database.py       # Database configuration
+│   └── main.py           # Application entry point
+├── data/                 # Data files directory
+├── database/             # Database files directory
+├── tests/                # Test suite
+│   ├── fixtures/         # Test data fixtures
+│   ├── integration/      # Integration tests
+│   ├── unit/             # Unit tests
+│   └── conftest.py       # Test configuration
+├── Dockerfile            # Docker configuration
+├── docker-compose.yml    # Docker Compose configuration
+├── requirements.txt      # Python dependencies
+└── README.md             # Project documentation
+```
+
