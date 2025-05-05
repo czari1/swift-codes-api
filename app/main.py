@@ -60,11 +60,9 @@ async def lifespan(app:FastAPI):
             hq_map = parser.get_headquarters_map(swift_data)
             branch_map = {}
 
-            # Convert hq_map format to match what bulk_create_swift_codes expects
             for hq_code, branches in hq_map.items():
                 branch_map[hq_code] = [branch['swift_code'] for branch in branches]
 
-            # Add empty associations list as third parameter
             associations = []
             swift_code_repository.bulk_create_swift_codes(swift_data, branch_map, associations)
             

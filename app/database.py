@@ -2,9 +2,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Create database directory if it doesn't exist
 def ensure_db_directory_exists():
-    # Use relative path from project root
     db_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database")
     if not os.path.exists(db_dir):
         print(f"Creating database directory: {db_dir}")
@@ -12,7 +10,6 @@ def ensure_db_directory_exists():
     return db_dir
 
 class DatabaseManager:
-    # Store database in app_data folder
     db_dir = ensure_db_directory_exists()
     database_path = os.path.join(db_dir, "swift_codes.db")
     database_url = f"sqlite:///{database_path}"

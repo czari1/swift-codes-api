@@ -132,11 +132,9 @@ class SwiftCodeRepository:
 
 
     def bulk_create_swift_codes(self, swift_data, branch_hq_map=None, associations=None):
-        # Use passed values or initialize defaults
         branch_hq_map = branch_hq_map or {}
         associations = associations or []
-        
-        # Convert dictionaries to SwiftCode models
+
         swift_code_models = []
         for data in swift_data:
             model = SwiftCode(
@@ -148,38 +146,31 @@ class SwiftCodeRepository:
                 is_headquarters=data['is_headquarters']
             )
             swift_code_models.append(model)
-            
-            # Only build branch map if we don't have one provided
+ 
             if not branch_hq_map and not data['is_headquarters']:
                 potential_hq = data['swift_code'].upper()[:6] + 'XXX'
                 if potential_hq not in branch_hq_map:
                     branch_hq_map[potential_hq] = []
                 branch_hq_map[potential_hq].append(data['swift_code'].upper())
-        
-        # Add models to DB and commit first
+
         self.db.add_all(swift_code_models)
         self.db.commit()
         logging.info(f"Added {len(swift_code_models)} SWIFT codes to database")
-        
-        # Create branch associations
+
         association_count = 0
         for hq_code, branch_codes in branch_hq_map.items():
-            # Check if HQ exists
             hq = self.db.query(SwiftCode).filter(SwiftCode.swift_code == hq_code).first()
             if hq:
                 logging.info(f"Found HQ {hq_code} with {len(branch_codes)} branches")
                 for branch_code in branch_codes:
-                    # Create association object
                     association = BranchAssociation(
                         id=str(uuid.uuid4()),
                         headquarter_swift=hq_code,
                         branch_swift=branch_code
                     )
-                    # Add to database
                     self.db.add(association)
                     association_count += 1
-        
-        # Commit associations in a separate transaction
+
         if association_count > 0:
             self.db.commit()
             logging.info(f"Created {association_count} branch associations")
