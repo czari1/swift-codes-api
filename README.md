@@ -6,15 +6,15 @@ A FastAPI application to parse, store, and query SWIFT/BIC codes from Excel (`.x
 
 ## Features
 
-*   **Data Parsing**: Loads SWIFT code data from `.xlsx` or `.csv` files.
-*   **Database Storage**: Stores parsed data in a database (SQLite by default).
-*   **API Endpoints**: Provides RESTful endpoints for querying and managing SWIFT codes.
-*   **Branch Association**: Automatically links branch codes to their headquarters.
-*   **Validation**: Includes basic validation for SWIFT code format.
+*   **Data Parsing**: Loads SWIFT code data from `.xlsx` or `.csv` files using `pandas`.
+*   **Database Storage**: Stores parsed data in an SQLite database using `SQLAlchemy`.
+*   **API Endpoints**: Provides RESTful endpoints built with `FastAPI` for querying and managing SWIFT codes.
+*   **Branch Association**: Automatically links branch codes to their headquarters during data loading and creation.
+*   **Validation**: Includes basic validation for SWIFT code format using regex.
 *   **Case Insensitive**: SWIFT code lookups are case-insensitive.
 *   **Docker Support**: Ready for containerized deployment using Docker and Docker Compose.
-*   **Testing**: Includes unit and integration tests using `pytest`.
-*   **Interactive Docs**: Provides Swagger UI (`/docs`) for easy API exploration.
+*   **Testing**: Includes unit and integration tests using `pytest`, covering parser, repository, service, controller, and API layers.
+*   **Interactive Docs**: Provides Swagger UI (`/docs`) and ReDoc (`/redoc`) for easy API exploration.
 
 ---
 
@@ -22,7 +22,7 @@ A FastAPI application to parse, store, and query SWIFT/BIC codes from Excel (`.x
 
 *   Python 3.12+
 *   Docker & Docker Compose (Recommended for deployment)
-*   Dependencies listed in `requirements.txt`
+*   Dependencies listed in [`requirements.txt`](requirements.txt)
 
 ---
 
@@ -35,12 +35,12 @@ A FastAPI application to parse, store, and query SWIFT/BIC codes from Excel (`.x
     ```
 
 2.  **Prepare Data File:**
-    *   Place your SWIFT code data file (e.g., `swiftCodes.xlsx` or `swiftCodes.csv`) inside the `data/` directory. Create the directory if it doesn't exist:
+    *   Place your SWIFT code data file (e.g., `swiftCodes.xlsx` or `swiftCodes.csv`) inside the [`data/`](data/) directory. Create the directory if it doesn't exist:
         ```bash
         mkdir data
-        cp /path/to/your/swiftCodes.xlsx data/
+        cp /path/to/your/swift_data.xlsx data/
         ```
-    *   The application looks for the file specified by the `SWIFT_DATA_PATH` environment variable, defaulting to `data/swiftCodes.xlsx`.
+    *   The application looks for the file specified by the `SWIFT_DATA_PATH` environment variable in [`docker-compose.yml`](docker-compose.yml) or defaults to `data/swiftCodes.xlsx` if run locally (see [`app/main.py`](app/main.py)).
 
 3.  **Option A: Using Docker (Recommended)**
     *   Ensure Docker and Docker Compose are installed.
@@ -48,7 +48,7 @@ A FastAPI application to parse, store, and query SWIFT/BIC codes from Excel (`.x
         ```bash
         # Make sure your user is in the 'docker' group or run with sudo
         # sudo usermod -aG docker $USER && newgrp docker
-        docker compose up --build
+        docker compose up --build -d
         ```
     *   The API will be available at `http://localhost:8080`.
 
@@ -72,12 +72,13 @@ A FastAPI application to parse, store, and query SWIFT/BIC codes from Excel (`.x
 
 ## Configuration
 
-The application can be configured using environment variables:
+The application can be configured using environment variables, primarily set in [`docker-compose.yml`](docker-compose.yml):
 
-*   `SWIFT_DATA_PATH`: Path to the SWIFT code data file (default: `data/swiftCodes.xlsx`).
-*   `DATABASE_PATH`: Path to the SQLite database file (default: `./swift_codes.db`).
+*   `SWIFT_DATA_PATH`: Path *inside the container* to the SWIFT code data file (e.g., `/app/data/swift_data.xlsx`).
+*   `DATABASE_PATH`: Path *inside the container* to the SQLite database file (e.g., `/app/database/swift_codes.db`).
+*   `PYTHONPATH`: Set to `/app` to ensure Python can find the application modules within the container.
 
-These can be set in your environment or within the `docker-compose.yml` file.
+When running locally, the application uses default paths relative to the project root (see [`app/main.py`](app/main.py) and [`app/database.py`](app/database.py)).
 
 ---
 
@@ -85,40 +86,81 @@ These can be set in your environment or within the `docker-compose.yml` file.
 
 ### Running the Application
 
-*   **Docker:** `docker compose up`
+*   **Docker:** `docker compose up` (add `-d` to run in detached mode)
 *   **Local:** `python -m app.main`
 
 ### Accessing the API
 
 *   **Base URL:** `http://localhost:8080`
 *   **Swagger UI (Interactive Docs):** `http://localhost:8080/docs`
+*   **ReDoc:** `http://localhost:8080/redoc`
 *   **Health Check:** `http://localhost:8080/health`
 
 ### API Endpoints
 
-*   **`GET /health`**: Checks the API status.
-*   **`GET /v1/swift-codes/{swift_code}`**: Retrieves details for a specific SWIFT code (case-insensitive).
+Defined in [`app/routes/swift_codes.py`](app/routes/swift_codes.py):
+
+*   **`GET /health`**: Checks the API status. Returns `{"status": "healthy"}`.
+*   **`GET /v1/swift-codes/{swift_code}`**: Retrieves details for a specific SWIFT code (case-insensitive), including associated branches if it's a headquarters.
 *   **`GET /v1/swift-codes/country/{country_iso2}`**: Retrieves all SWIFT codes for a given country ISO2 code.
-*   **`POST /v1/swift-codes/`**: Creates a new SWIFT code entry. Requires a JSON body matching the `SwiftCodeBase` schema.
-*   **`DELETE /v1/swift-codes/{swift_code}`**: Deletes a specific SWIFT code.
+*   **`POST /v1/swift-codes/`**: Creates a new SWIFT code entry. Requires a JSON body matching the `SwiftCodeBase` schema defined in [`app/models/types.py`](app/models/types.py).
+*   **`DELETE /v1/swift-codes/{swift_code}`**: Deletes a specific SWIFT code and its associations.
 
 ---
 
 ## Testing
 
-Tests are written using `pytest`.
+Tests are written using `pytest` and cover various aspects of the application. Fixtures and test configurations are defined in [`tests/conftest.py`](tests/conftest.py).
 
-1.  Make sure you have installed the development dependencies (if any, otherwise `requirements.txt` is sufficient).
-2.  Run tests from the project root directory:
+1.  Make sure you have installed the development dependencies:
     ```bash
     # Ensure virtual environment is active if not using Docker
-    python -m pytest
+    pip install pytest pytest-asyncio pytest-cov httpx
     ```
-    Or run with more details:
-    ```bash
-    python -m pytest -v
-    ```
+2.  Run tests from the project root directory:
+
+    *   **Locally:**
+        ```bash
+        # Run all tests
+        python -m pytest
+
+        # Run with verbose output
+        python -m pytest -v
+
+        # Run with test coverage report
+        python -m pytest --cov=app
+        ```
+    *   **Using Docker:**
+        ```bash
+        # Run all tests inside the container
+        docker compose run --rm api pytest
+
+        # Run with coverage
+        docker compose run --rm api pytest --cov=app
+        ```
 
 ---
 
 ## Project Structure
+
+SWITFParser/
+├── app/                        # Application code
+│   ├── controllers/            # API controllers
+│   ├── models/                 # Data models
+│   ├── repositories/           # Database repositories
+│   ├── routes/                 # API routes
+│   ├── services/               # Business logic
+│   ├── utils/                  # Utilities
+│   ├── database.py             # Database configuration
+│   └── main.py                 # Application entry point
+├── data/                       # Data files directory
+├── database/                   # Database files directory
+├── tests/                      # Test suite
+│   ├── fixtures/               # Test data fixtures
+│   ├── integration/            # Integration tests
+│   ├── unit/                   # Unit tests
+│   └── conftest.py             # Test configuration
+├── Dockerfile                  # Docker configuration
+├── [docker-compose.yml]
+├── [requirements.txt]           
+└── [README.md]        
